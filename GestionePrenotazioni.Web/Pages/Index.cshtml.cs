@@ -256,6 +256,25 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         return RedirectToConfigSection("users");
     }
 
+    public IActionResult OnPostDeleteUser(Guid targetUserId)
+    {
+        if (DenyUnlessSetup() is { } denied)
+        {
+            return denied;
+        }
+
+        if (store.DeleteUser(targetUserId, CurrentUserId(), out var error))
+        {
+            FlashMessage = "Utente cancellato.";
+        }
+        else
+        {
+            FlashMessage = error;
+        }
+
+        return RedirectToConfigSection("users");
+    }
+
     public IActionResult OnPostEvent()
     {
         if (DenyUnlessSetup() is { } denied)
@@ -302,6 +321,24 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
 
         store.SetEventArchived(eventId, isArchived, CurrentUserId());
         FlashMessage = isArchived ? "Evento archiviato." : "Evento ripristinato.";
+        return RedirectToConfigSection("events");
+    }
+
+    public IActionResult OnPostSetDefaultEvent(Guid eventId)
+    {
+        if (DenyUnlessSetup() is { } denied)
+        {
+            return denied;
+        }
+
+        TryUserOperation(() =>
+        {
+            store.SetDefaultEvent(eventId, CurrentUserId());
+            SelectedEventId = eventId;
+            SelectedDateId = null;
+            SelectedShiftId = null;
+        }, "Evento predefinito aggiornato.");
+
         return RedirectToConfigSection("events");
     }
 
@@ -865,7 +902,8 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         var events = store.Events.Where(item => item.OrganizationId == SelectedOrganizationId).OrderBy(item => item.IsArchived).ThenBy(item => item.Name).ToArray();
         SelectedEventId = SelectedEventId.HasValue && events.Any(item => item.Id == SelectedEventId.Value)
             ? SelectedEventId
-            : events.FirstOrDefault(item => !item.IsArchived && EventHasActiveReservations(item.Id))?.Id ??
+            : events.FirstOrDefault(item => !item.IsArchived && item.IsDefault)?.Id ??
+              events.FirstOrDefault(item => !item.IsArchived && EventHasActiveReservations(item.Id))?.Id ??
               events.FirstOrDefault(item => !item.IsArchived && EventHasTables(item.Id))?.Id ??
               events.FirstOrDefault(item => !item.IsArchived)?.Id ??
               events.FirstOrDefault()?.Id;
@@ -969,7 +1007,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
             .ToArray();
 
         OrganizationRows = organizations.Select(item => new OrganizationRow(item.Id, item.Name, item.Id == CurrentUser.OrganizationId)).ToArray();
-        EventRows = events.Select(item => new EventRow(item.Id, item.Name, item.IsArchived)).ToArray();
+        EventRows = events.Select(item => new EventRow(item.Id, item.Name, item.IsArchived, item.IsDefault)).ToArray();
         DateRows = dates.Select(item => new DateRow(item.Id, item.Date)).ToArray();
         ShiftRows = shifts.Select(item => new ShiftRow(item.Id, item.Name, item.StartsAt?.ToString("HH:mm") ?? string.Empty, item.IsClosed)).ToArray();
         TableRows = BuildTableRows(Tables, assignments, shiftReservations);
@@ -1779,7 +1817,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
     public sealed record ReservationTableBadge(string Label, int Capacity, int FreeSeats);
     public sealed record AssignmentRow(Guid Id, string TableLabel, string ReservationLabel, string Source, int People, int Capacity);
     public sealed record OrganizationRow(Guid Id, string Name, bool IsCurrentUserOrganization);
-    public sealed record EventRow(Guid Id, string Name, bool IsArchived);
+    public sealed record EventRow(Guid Id, string Name, bool IsArchived, bool IsDefault);
     public sealed record DateRow(Guid Id, DateOnly Date);
     private sealed record ReceptionContext(Guid OrganizationId, Guid EventId, Guid EventDateId, Guid ShiftId);
     public sealed record BookingShiftOption(Guid ShiftId, string Label, string Url, bool IsSelected, DateOnly Date, TimeOnly StartsAt);

@@ -102,6 +102,7 @@
                                     @foreach (var user in Model.UserRows)
                                     {
                                         var formId = $"user-active-{user.Id}";
+                                        var deleteFormId = $"user-delete-{user.Id}";
                                         <tr>
                                             <td><strong>@user.UserName</strong></td>
                                             <td>@user.DisplayName</td>
@@ -117,6 +118,14 @@
                                                     <input type="hidden" asp-for="SelectedShiftId" />
                                                 </form>
                                                 <button form="@formId" type="submit" class="ghost-action">@(user.IsActive ? "Disattiva" : "Attiva")</button>
+                                                <form id="@deleteFormId" method="post" asp-page-handler="DeleteUser" onsubmit="return confirm('Cancellare questo utente?');">
+                                                    <input type="hidden" name="targetUserId" value="@user.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@deleteFormId" type="submit" class="danger-action" disabled="@(user.Id == Model.CurrentUser.Id)">Cancella</button>
                                             </td>
                                         </tr>
                                     }
@@ -148,10 +157,17 @@
                                     {
                                         var editFormId = $"event-edit-{item.Id}";
                                         var toggleFormId = $"event-toggle-{item.Id}";
+                                        var defaultFormId = $"event-default-{item.Id}";
                                         var deleteFormId = $"event-delete-{item.Id}";
                                         <tr>
                                             <td><input form="@editFormId" name="name" value="@item.Name" /></td>
-                                            <td>@(item.IsArchived ? "Archiviato" : "Attivo")</td>
+                                            <td>
+                                                @(item.IsArchived ? "Archiviato" : "Attivo")
+                                                @if (item.IsDefault)
+                                                {
+                                                    <span class="role-chip">Predefinito</span>
+                                                }
+                                            </td>
                                             <td class="table-actions">
                                                 <form id="@editFormId" method="post" asp-page-handler="RenameEvent">
                                                     <input type="hidden" name="eventId" value="@item.Id" />
@@ -170,6 +186,14 @@
                                                     <input type="hidden" asp-for="SelectedShiftId" />
                                                 </form>
                                                 <button form="@toggleFormId" type="submit" class="ghost-action">@(item.IsArchived ? "Ripristina" : "Archivia")</button>
+                                                <form id="@defaultFormId" method="post" asp-page-handler="SetDefaultEvent">
+                                                    <input type="hidden" name="eventId" value="@item.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@defaultFormId" type="submit" class="ghost-action" disabled="@(item.IsArchived || item.IsDefault)">Predefinito</button>
                                                 <form id="@deleteFormId" method="post" asp-page-handler="DeleteEvent" onsubmit="return confirm('Cancellare questo evento? Verranno eliminate anche date, turni, tavoli, prenotazioni e assegnazioni collegate.');">
                                                     <input type="hidden" name="eventId" value="@item.Id" />
                                                     <input type="hidden" asp-for="SelectedOrganizationId" />

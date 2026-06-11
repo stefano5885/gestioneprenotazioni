@@ -268,6 +268,59 @@ public sealed class AppStoreTests
     }
 
     [Fact]
+    public void UsersCanBeDeletedExceptCurrentUserAndLastActiveAdmin()
+    {
+        var dataPath = CreateDataPath();
+        try
+        {
+            var store = CreateStore(dataPath);
+            var admin = store.Users.First(item => item.Role == UserRole.Admin);
+            var organization = store.Organizations.First(item => item.Id == admin.OrganizationId);
+            var extraUser = store.AddUser(organization.Id, "temporaneo", "password", UserRole.BookingOperator, null, admin.Id);
+
+            Assert.False(store.DeleteUser(admin.Id, admin.Id, out var error));
+            Assert.Contains("accesso", error, StringComparison.OrdinalIgnoreCase);
+
+            Assert.True(store.DeleteUser(extraUser.Id, admin.Id, out error), error);
+            Assert.DoesNotContain(store.Users, item => item.Id == extraUser.Id);
+
+            var otherAdmin = store.AddUser(organization.Id, "altroadmin", "password", UserRole.Admin, null, admin.Id);
+            Assert.True(store.DeleteUser(admin.Id, otherAdmin.Id, out error), error);
+        }
+        finally
+        {
+            DeleteDataPath(dataPath);
+        }
+    }
+
+    [Fact]
+    public void OnlyOneDefaultEventIsAllowedPerOrganization()
+    {
+        var dataPath = CreateDataPath();
+        try
+        {
+            var store = CreateStore(dataPath);
+            var admin = store.Users.First(item => item.Role == UserRole.Admin);
+            var organization = store.Organizations.First(item => item.Id == admin.OrganizationId);
+            var firstEvent = store.Events.First(item => item.OrganizationId == organization.Id);
+            var secondEvent = store.AddEvent(organization.Id, "Secondo evento", admin.Id);
+
+            store.SetDefaultEvent(firstEvent.Id, admin.Id);
+            store.SetDefaultEvent(secondEvent.Id, admin.Id);
+
+            Assert.False(store.Events.Single(item => item.Id == firstEvent.Id).IsDefault);
+            Assert.True(store.Events.Single(item => item.Id == secondEvent.Id).IsDefault);
+
+            store.SetEventArchived(secondEvent.Id, isArchived: true, admin.Id);
+            Assert.False(store.Events.Single(item => item.Id == secondEvent.Id).IsDefault);
+        }
+        finally
+        {
+            DeleteDataPath(dataPath);
+        }
+    }
+
+    [Fact]
     public void GuidedEventSetupCreatesScheduleWithoutDuplicatingExistingItems()
     {
         var dataPath = CreateDataPath();

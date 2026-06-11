@@ -252,6 +252,38 @@ public sealed class AppStore
         }
     }
 
+    public bool DeleteUser(Guid targetUserId, Guid userId, out string error)
+    {
+        lock (gate)
+        {
+            error = string.Empty;
+            if (targetUserId == userId)
+            {
+                error = "Non puoi cancellare l'utente con cui hai effettuato l'accesso.";
+                return false;
+            }
+
+            var user = data.Users.FirstOrDefault(item => item.Id == targetUserId);
+            if (user is null)
+            {
+                error = "Utente non trovato.";
+                return false;
+            }
+
+            if (user.Role == UserRole.Admin &&
+                data.Users.Count(item => item.OrganizationId == user.OrganizationId && item.Role == UserRole.Admin && item.IsActive && item.Id != targetUserId) == 0)
+            {
+                error = "Non puoi cancellare l'ultimo admin attivo dell'organizzazione.";
+                return false;
+            }
+
+            data.Users.Remove(user);
+            WriteAudit(user.OrganizationId, userId, nameof(ApplicationUser), user.Id, "delete", $"{user.UserName} ({user.Role})");
+            Save();
+            return true;
+        }
+    }
+
     public FairEvent AddEvent(Guid organizationId, string name, Guid userId)
     {
         lock (gate)
@@ -292,8 +324,32 @@ public sealed class AppStore
             var fairEvent = data.Events.First(item => item.Id == eventId);
             var before = fairEvent.IsArchived ? "archiviato" : "attivo";
             fairEvent.IsArchived = isArchived;
+            if (isArchived)
+            {
+                fairEvent.IsDefault = false;
+            }
             var after = fairEvent.IsArchived ? "archiviato" : "attivo";
             WriteAudit(fairEvent.OrganizationId, userId, nameof(FairEvent), eventId, isArchived ? "archive" : "restore", $"{fairEvent.Name}. {BeforeAfter(before, after)}");
+            Save();
+        }
+    }
+
+    public void SetDefaultEvent(Guid eventId, Guid userId)
+    {
+        lock (gate)
+        {
+            var fairEvent = data.Events.First(item => item.Id == eventId);
+            if (fairEvent.IsArchived)
+            {
+                throw new InvalidOperationException("Non puoi impostare come predefinito un evento archiviato.");
+            }
+
+            foreach (var item in data.Events.Where(item => item.OrganizationId == fairEvent.OrganizationId))
+            {
+                item.IsDefault = item.Id == eventId;
+            }
+
+            WriteAudit(fairEvent.OrganizationId, userId, nameof(FairEvent), eventId, "set-default", fairEvent.Name);
             Save();
         }
     }
