@@ -97,6 +97,12 @@ document.addEventListener("DOMContentLoaded", () => {
     setMenuCollapsed(collapsed);
   });
 
+  document.querySelector("[data-booking-shift-select]")?.addEventListener("change", (event) => {
+    if (event.target instanceof HTMLSelectElement && event.target.value) {
+      window.location.assign(event.target.value);
+    }
+  });
+
   document.querySelectorAll("[data-context-form]").forEach((form) => {
     const mustConfirm = form.dataset.confirmContextChange === "true";
     form.querySelectorAll("select").forEach((select) => {

@@ -13,6 +13,8 @@ namespace GestionePrenotazioni.Web.Pages;
 
 public sealed class IndexModel(AppStore store, ITableAssignmentService assignmentService, ExportService exportService) : PageModel
 {
+    private const string LastBookingShiftCookieName = "gestione-prenotazioni.last-booking-shift";
+
     [BindProperty(SupportsGet = true)]
     public Guid? SelectedOrganizationId { get; set; }
 
@@ -77,6 +79,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
     public IReadOnlyList<SelectListItem> RoleOptions { get; private set; } = [];
     public IReadOnlyList<SelectListItem> StatusOptions { get; private set; } = [];
     public IReadOnlyList<SelectListItem> ReservationTimeOptions { get; private set; } = [];
+    public IReadOnlyList<BookingShiftOption> BookingShiftOptions { get; private set; } = [];
     public string OrganizationName { get; private set; } = string.Empty;
     public ApplicationUser CurrentUser { get; private set; } = null!;
     public bool CanManageSetup => CurrentUser.Role == UserRole.Admin;
@@ -606,6 +609,15 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
                 ReservationInput.MobilePhone,
                 CurrentUserId(),
                 ReservationInput.Notes);
+            Response.Cookies.Append(
+                LastBookingShiftCookieName,
+                SelectedShift.Id.ToString(),
+                new CookieOptions
+                {
+                    IsEssential = true,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddDays(30)
+                });
             SetFlash("Prenotazione aggiunta.", "success", ReservationFlashDescription(reservation));
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
@@ -818,6 +830,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
             ? store.Organizations
             : store.Organizations.Where(item => item.Id == CurrentUser.OrganizationId).ToArray();
         var useCurrentReceptionContext = ShouldUseCurrentReceptionContext();
+        var usePreferredBookingContext = ShouldUsePreferredBookingContext();
 
         if (useCurrentReceptionContext)
         {
@@ -828,6 +841,17 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
                 SelectedEventId = currentContext.EventId;
                 SelectedDateId = currentContext.EventDateId;
                 SelectedShiftId = currentContext.ShiftId;
+            }
+        }
+        else if (usePreferredBookingContext)
+        {
+            var preferredContext = FindPreferredBookingContext(organizations, DateTime.Now);
+            if (preferredContext is not null)
+            {
+                SelectedOrganizationId = preferredContext.OrganizationId;
+                SelectedEventId = preferredContext.EventId;
+                SelectedDateId = preferredContext.EventDateId;
+                SelectedShiftId = preferredContext.ShiftId;
             }
         }
 
@@ -980,6 +1004,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
                 .Select(status => new SelectListItem(StatusLabel(status), status.ToString(), StatusFilter == status.ToString()))
         ];
         ReservationTimeOptions = BuildReservationTimeOptions(SelectedShift);
+        BookingShiftOptions = BuildBookingShiftOptions(organizations);
     }
 
     private static ReservationTableBadge BuildReservationTableBadge(
@@ -1333,7 +1358,42 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
             !Request.Query.ContainsKey(nameof(SelectedShiftId));
     }
 
+    private bool ShouldUsePreferredBookingContext()
+    {
+        return IsBookingsPage &&
+            HttpContext.Request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+            !Request.Query.ContainsKey(nameof(SelectedOrganizationId)) &&
+            !Request.Query.ContainsKey(nameof(SelectedEventId)) &&
+            !Request.Query.ContainsKey(nameof(SelectedDateId)) &&
+            !Request.Query.ContainsKey(nameof(SelectedShiftId));
+    }
+
+    private ReceptionContext? FindPreferredBookingContext(IEnumerable<Organization> organizations, DateTime now)
+    {
+        if (Request.Cookies.TryGetValue(LastBookingShiftCookieName, out var lastShiftIdValue) &&
+            Guid.TryParse(lastShiftIdValue, out var lastShiftId))
+        {
+            var lastContext = ShiftContextFor(organizations, lastShiftId);
+            if (lastContext is not null)
+            {
+                return lastContext;
+            }
+        }
+
+        return FindCurrentOrNextShiftContext(organizations, now);
+    }
+
     private ReceptionContext? FindCurrentReceptionContext(IEnumerable<Organization> organizations, DateTime now)
+    {
+        return FindCurrentDayShiftContext(organizations, now);
+    }
+
+    private ReceptionContext? FindCurrentOrNextShiftContext(IEnumerable<Organization> organizations, DateTime now)
+    {
+        return FindCurrentDayShiftContext(organizations, now) ?? FindNextShiftContext(organizations, now);
+    }
+
+    private ReceptionContext? FindCurrentDayShiftContext(IEnumerable<Organization> organizations, DateTime now)
     {
         var organizationIds = organizations.Select(item => item.Id).ToHashSet();
         var today = DateOnly.FromDateTime(now);
@@ -1364,6 +1424,61 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
             .ThenBy(item => item.ShiftName, StringComparer.OrdinalIgnoreCase)
             .Select(item => new ReceptionContext(item.OrganizationId, item.EventId, item.EventDateId, item.ShiftId))
             .FirstOrDefault();
+    }
+
+    private ReceptionContext? FindNextShiftContext(IEnumerable<Organization> organizations, DateTime now)
+    {
+        var organizationIds = organizations.Select(item => item.Id).ToHashSet();
+        var today = DateOnly.FromDateTime(now);
+
+        return store.Events
+            .Where(item => organizationIds.Contains(item.OrganizationId) && !item.IsArchived)
+            .SelectMany(fairEvent => store.Dates
+                .Where(date => date.EventId == fairEvent.Id && date.Date >= today)
+                .SelectMany(date => store.Shifts
+                    .Where(shift => shift.EventDateId == date.Id && !shift.IsClosed)
+                    .Select(shift => new
+                    {
+                        fairEvent.OrganizationId,
+                        EventId = fairEvent.Id,
+                        EventDateId = date.Id,
+                        ShiftId = shift.Id,
+                        date.Date,
+                        StartsAt = shift.StartsAt ?? TimeOnly.MaxValue,
+                        EventName = fairEvent.Name,
+                        ShiftName = shift.Name
+                    })))
+            .OrderBy(item => item.Date)
+            .ThenBy(item => item.StartsAt)
+            .ThenBy(item => item.EventName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.ShiftName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new ReceptionContext(item.OrganizationId, item.EventId, item.EventDateId, item.ShiftId))
+            .FirstOrDefault();
+    }
+
+    private ReceptionContext? ShiftContextFor(IEnumerable<Organization> organizations, Guid shiftId)
+    {
+        var organizationIds = organizations.Select(item => item.Id).ToHashSet();
+        var shift = store.Shifts.FirstOrDefault(item => item.Id == shiftId && !item.IsClosed);
+        if (shift is null)
+        {
+            return null;
+        }
+
+        var date = store.Dates.FirstOrDefault(item => item.Id == shift.EventDateId);
+        if (date is null)
+        {
+            return null;
+        }
+
+        var fairEvent = store.Events.FirstOrDefault(item =>
+            item.Id == date.EventId &&
+            !item.IsArchived &&
+            organizationIds.Contains(item.OrganizationId));
+
+        return fairEvent is null
+            ? null
+            : new ReceptionContext(fairEvent.OrganizationId, fairEvent.Id, date.Id, shift.Id);
     }
 
     private static int TimeDistanceMinutes(TimeOnly? shiftTime, TimeOnly currentTime)
@@ -1411,6 +1526,42 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         }
 
         return options;
+    }
+
+    private IReadOnlyList<BookingShiftOption> BuildBookingShiftOptions(IEnumerable<Organization> organizations)
+    {
+        var organizationIds = organizations.Select(item => item.Id).ToHashSet();
+        var culture = CultureInfo.GetCultureInfo("it-IT");
+
+        return store.Events
+            .Where(fairEvent => organizationIds.Contains(fairEvent.OrganizationId) && !fairEvent.IsArchived)
+            .SelectMany(fairEvent => store.Dates
+                .Where(date => date.EventId == fairEvent.Id)
+                .SelectMany(date => store.Shifts
+                    .Where(shift => shift.EventDateId == date.Id && !shift.IsClosed)
+                    .Select(shift =>
+                    {
+                        var dateLabel = culture.TextInfo.ToTitleCase(date.Date.ToString("dddd dd MMMM yyyy", culture));
+                        var label = $"{dateLabel} - {shift.Name}";
+                        if (store.Events.Count(item => item.OrganizationId == fairEvent.OrganizationId && !item.IsArchived) > 1)
+                        {
+                            label = $"{fairEvent.Name} - {label}";
+                        }
+
+                        var url = Url.Page("/Bookings", null, new
+                        {
+                            SelectedOrganizationId = fairEvent.OrganizationId,
+                            SelectedEventId = fairEvent.Id,
+                            SelectedDateId = date.Id,
+                            SelectedShiftId = shift.Id
+                        }) ?? string.Empty;
+
+                        return new BookingShiftOption(shift.Id, label, url, shift.Id == SelectedShiftId, date.Date, shift.StartsAt ?? TimeOnly.MaxValue);
+                    })))
+            .OrderBy(item => item.Date)
+            .ThenBy(item => item.StartsAt)
+            .ThenBy(item => item.Label, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private bool EventHasActiveReservations(Guid eventId)
@@ -1631,6 +1782,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
     public sealed record EventRow(Guid Id, string Name, bool IsArchived);
     public sealed record DateRow(Guid Id, DateOnly Date);
     private sealed record ReceptionContext(Guid OrganizationId, Guid EventId, Guid EventDateId, Guid ShiftId);
+    public sealed record BookingShiftOption(Guid ShiftId, string Label, string Url, bool IsSelected, DateOnly Date, TimeOnly StartsAt);
 
     public sealed record ShiftRow(Guid Id, string Name, string StartsAt, bool IsClosed);
     public sealed record TableRow(Guid Id, string Code, int Capacity, string OccupancyLabel, string Notes);
