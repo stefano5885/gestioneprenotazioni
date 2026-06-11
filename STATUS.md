@@ -7,8 +7,7 @@
 - App ASP.NET Core Razor Pages `GestionePrenotazioni.Web`.
 - Test xUnit `GestionePrenotazioni.Tests`.
 - Dockerfile multi-stage.
-- Login demo `admin/admin`.
-- Store persistente JSON con dati demo in `App_Data`.
+- Store persistente JSON in `App_Data`.
 - Dominio iniziale:
   - Organization
   - ApplicationUser

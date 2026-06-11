@@ -19,22 +19,12 @@ dotnet run --project GestionePrenotazioni.Web --urls http://localhost:5088
 
 Apri `http://localhost:5088`.
 
-Credenziali demo locali:
-
-- Utente: `admin`
-- Password: `admin`
-- Utente: `prenotazioni`
-- Password: `prenotazioni`
-- Utente: `accoglienza`
-- Password: `accoglienza`
-
 ## Funzioni disponibili nello scaffolding
 
 - Login con cookie authentication.
 - Dashboard mobile-first.
 - Pagine separate per panoramica, prenotazioni, accoglienza, assegnazioni tavoli, export e configurazione.
 - Focus preservato dopo inserimento prenotazioni e azioni di accoglienza.
-- Dati demo in memoria.
 - Persistenza locale JSON in `App_Data`.
 - Gerarchia organizzazione, evento, data, turno.
 - Gestione organizzazioni, utenti, eventi, date, turni e tavoli.
