@@ -9,6 +9,8 @@ public sealed class Reservation
     public TimeOnly? ExpectedAt { get; set; }
     public string? MobilePhone { get; set; }
     public string? Notes { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public Guid? CreatedByUserId { get; set; }
     public required int PartySize { get; set; }
     public ReservationStatus Status { get; set; } = ReservationStatus.Entered;
 }

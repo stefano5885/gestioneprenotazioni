@@ -28,6 +28,10 @@ else
                         {
                             <span class="reservation-note">@row.Notes</span>
                         }
+                        @if (!string.IsNullOrWhiteSpace(row.CreatedInfoLabel))
+                        {
+                            <span class="reservation-created">@row.CreatedInfoLabel</span>
+                        }
                     </div>
                     <div class="reservation-chips">
                         <span class="reservation-status @row.StatusCssClass">@row.StatusLabel</span>
@@ -106,7 +110,7 @@ else
                             <input type="hidden" asp-for="SelectedShiftId" />
                             <input type="hidden" asp-for="SearchText" />
                             <input type="hidden" asp-for="StatusFilter" />
-                            <button type="submit" class="booking-cancel-action" disabled="@(row.StatusLabel == "Annullata")">Cancella</button>
+                            <button type="submit" class="booking-cancel-action" disabled="@(row.StatusLabel == "Annullata")" data-confirm-message="Confermi la cancellazione della prenotazione di @row.BookerName?">Cancella</button>
                         </form>
                     </div>
                 }

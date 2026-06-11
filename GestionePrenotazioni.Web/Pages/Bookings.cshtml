@@ -23,21 +23,28 @@
                     <input type="hidden" asp-for="SelectedEventId" />
                     <input type="hidden" asp-for="SelectedDateId" />
                     <input type="hidden" asp-for="SelectedShiftId" />
-                    <label class="form-wide">Giorno e turno
-                        <select data-booking-shift-select aria-label="Giorno e turno prenotazione">
-                            @foreach (var option in Model.BookingShiftOptions)
-                            {
-                                if (option.IsSelected)
+                    @if (Model.BookingShiftOptions.Count > 0)
+                    {
+                        <label class="form-wide">Giorno e turno
+                            <select data-booking-shift-select aria-label="Giorno e turno prenotazione">
+                                @foreach (var option in Model.BookingShiftOptions)
                                 {
-                                    <option value="@option.Url" selected>@option.Label</option>
+                                    if (option.IsSelected)
+                                    {
+                                        <option value="@option.Url" selected>@option.Label</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@option.Url">@option.Label</option>
+                                    }
                                 }
-                                else
-                                {
-                                    <option value="@option.Url">@option.Label</option>
-                                }
-                            }
-                        </select>
-                    </label>
+                            </select>
+                        </label>
+                    }
+                    else
+                    {
+                        <p class="notice form-wide">Nessun giorno/turno configurato per l'evento selezionato.</p>
+                    }
                     <label>Nome <input id="reservation-name" asp-for="ReservationInput.BookerName" required data-uppercase-name data-booker-name autofocus="@(Model.FocusTarget == "reservation-name" || string.IsNullOrWhiteSpace(Model.FocusTarget))" /></label>
                     <label>Persone <input asp-for="ReservationInput.PartySize" type="number" min="1" required /></label>
                     <label>Ora <select asp-for="ReservationInput.ExpectedAt" asp-items="Model.ReservationTimeOptions"></select></label>

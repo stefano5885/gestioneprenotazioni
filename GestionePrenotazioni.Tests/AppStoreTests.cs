@@ -171,6 +171,29 @@ public sealed class AppStoreTests
     }
 
     [Fact]
+    public void AddReservationStoresCreatorAndCreationTime()
+    {
+        var dataPath = CreateDataPath();
+        try
+        {
+            var store = CreateStore(dataPath);
+            var user = store.Users.First(item => item.Role == UserRole.Admin);
+            var shift = store.Shifts.First();
+            var date = store.Dates.First(item => item.Id == shift.EventDateId);
+            var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+
+            var reservation = store.AddReservation(shift.Id, "Creatore", date.Date, 2, null, null, user.Id);
+
+            Assert.Equal(user.Id, reservation.CreatedByUserId);
+            Assert.True(reservation.CreatedAt >= before);
+        }
+        finally
+        {
+            DeleteDataPath(dataPath);
+        }
+    }
+
+    [Fact]
     public void ManualAssignmentRejectsNoShowReservations()
     {
         var dataPath = CreateDataPath();

@@ -958,6 +958,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
             filteredReservations = filteredReservations.Where(reservation => reservation.Status != ReservationStatus.Cancelled);
         }
 
+        var usersById = store.Users.ToDictionary(user => user.Id, user => user.UserName);
         ReservationRows = filteredReservations.Select(reservation =>
         {
             var assignment = assignments.FirstOrDefault(item => item.ReservationIds.Contains(reservation.Id));
@@ -970,6 +971,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
                 reservation.BookerName,
                 reservation.MobilePhone ?? string.Empty,
                 reservation.Notes ?? string.Empty,
+                CreatedInfoLabel(reservation, usersById),
                 reservation.ExpectedAt?.ToString("HH:mm") ?? string.Empty,
                 reservation.PartySize,
                 StatusLabel(reservation.Status),
@@ -998,6 +1000,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
                 reservation.BookerName,
                 reservation.MobilePhone ?? string.Empty,
                 reservation.Notes ?? string.Empty,
+                CreatedInfoLabel(reservation, usersById),
                 reservation.ExpectedAt?.ToString("HH:mm") ?? string.Empty,
                 reservation.PartySize,
                 StatusLabel(reservation.Status),
@@ -1016,7 +1019,6 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
             .OrderBy(item => item.UserName)
             .Select(item => new UserRow(item.Id, item.UserName, item.DisplayName ?? string.Empty, item.Role.ToString(), item.IsActive))
             .ToArray();
-        var usersById = store.Users.ToDictionary(user => user.Id, user => user.UserName);
         AuditRows = store.AuditLogs
             .Where(item => item.OrganizationId == SelectedOrganizationId)
             .OrderByDescending(item => item.CreatedAt)
@@ -1751,6 +1753,22 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         };
     }
 
+    private static string CreatedInfoLabel(Reservation reservation, IReadOnlyDictionary<Guid, string> usersById)
+    {
+        var parts = new List<string>(2);
+        if (reservation.CreatedByUserId is { } userId)
+        {
+            parts.Add($"Inserita da {usersById.GetValueOrDefault(userId, "utente rimosso")}");
+        }
+
+        if (reservation.CreatedAt != default)
+        {
+            parts.Add(reservation.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"));
+        }
+
+        return string.Join(" · ", parts);
+    }
+
     public sealed class ReservationInputModel
     {
         [Required]
@@ -1813,7 +1831,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         public UserRole Role { get; set; } = UserRole.BookingOperator;
     }
 
-    public sealed record ReservationRow(Guid Id, string BookerName, string MobilePhone, string Notes, string ExpectedAt, int PartySize, string StatusLabel, string StatusCssClass, string TableLabel, ReservationTableBadge? TableBadge);
+    public sealed record ReservationRow(Guid Id, string BookerName, string MobilePhone, string Notes, string CreatedInfoLabel, string ExpectedAt, int PartySize, string StatusLabel, string StatusCssClass, string TableLabel, ReservationTableBadge? TableBadge);
     public sealed record ReservationTableBadge(string Label, int Capacity, int FreeSeats);
     public sealed record AssignmentRow(Guid Id, string TableLabel, string ReservationLabel, string Source, int People, int Capacity);
     public sealed record OrganizationRow(Guid Id, string Name, bool IsCurrentUserOrganization);

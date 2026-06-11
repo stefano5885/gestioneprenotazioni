@@ -783,7 +783,9 @@ public sealed class AppStore
                 PartySize = partySize,
                 ExpectedAt = expectedAt,
                 MobilePhone = string.IsNullOrWhiteSpace(mobilePhone) ? null : mobilePhone.Trim(),
-                Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim()
+                Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
+                CreatedAt = DateTimeOffset.UtcNow,
+                CreatedByUserId = userId
             };
             data.Reservations.Add(reservation);
             WriteAudit(OrganizationIdForShift(shiftId), userId, nameof(Reservation), reservation.Id, "create", ReservationDetails(reservation));

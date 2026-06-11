@@ -1070,6 +1070,20 @@ button[disabled] {
   font-weight: 800;
 }
 
+.reservation-created {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #f7f5ed;
+  color: #68746e;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
 .reservation-card .table-badge-empty {
   border-color: #d8dee2;
   background: #edf0f2;

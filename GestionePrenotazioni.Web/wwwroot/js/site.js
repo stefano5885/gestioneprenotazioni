@@ -86,6 +86,20 @@ function setupFlashMessage() {
 document.addEventListener("DOMContentLoaded", () => {
   setupFlashMessage();
 
+  document.addEventListener("submit", (event) => {
+    const submitter = event.submitter;
+    if (!(submitter instanceof HTMLElement)) {
+      return;
+    }
+
+    const message = submitter.dataset.confirmMessage;
+    if (!message || window.confirm(message)) {
+      return;
+    }
+
+    event.preventDefault();
+  });
+
   const menu = document.querySelector(".app-menu");
   const savedMenuState = localStorage.getItem(menuStorageKey);
   const defaultCollapsed = menu?.dataset.compactWorkflow === "true";
