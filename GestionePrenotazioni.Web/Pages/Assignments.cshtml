@@ -76,8 +76,55 @@
         <section class="panel" id="manual-assignments">
             <header class="panel-head">
                 <div>
-                    <p class="eyebrow">Manuale</p>
-                    <h2>Prenotazioni da verificare</h2>
+                    <p class="eyebrow">Assistita</p>
+                    <h2>Assegnazione rapida</h2>
+                </div>
+            </header>
+            @if (Model.AssistedAssignmentRows.Count == 0)
+            {
+                <p class="notice">Nessuna prenotazione da mostrare per il turno selezionato.</p>
+            }
+            else
+            {
+                <label class="assisted-search">Cerca prenotazione
+                    <input type="search" placeholder="Nome" autocomplete="off" data-assisted-search />
+                </label>
+                <div class="assisted-assignment-list" data-assisted-assignment-list>
+                    @foreach (var row in Model.AssistedAssignmentRows)
+                    {
+                        <article class="assisted-assignment-row" data-assisted-row>
+                            <div class="assisted-reservation-main">
+                                <strong>@row.BookerName</strong>
+                                <span>
+                                    @if (!string.IsNullOrWhiteSpace(row.ExpectedAt))
+                                    {
+                                        <text>@row.ExpectedAt - </text>
+                                    }
+                                    @row.PartySize persone
+                                </span>
+                            </div>
+                            <span class="reservation-status @row.StatusCssClass" data-assisted-status>@row.StatusLabel</span>
+                            <span class="assisted-table-label" data-assisted-table-label>@row.TableLabel</span>
+                            @if (Model.CanManageReservations)
+                            {
+                                <form method="post" asp-page-handler="AssistedAssign" class="assisted-assignment-form" data-assisted-assign-form>
+                                    <input type="hidden" name="reservationId" value="@row.Id" />
+                                    <input name="tableCodes" value="@row.TableInputValue" inputmode="numeric" autocomplete="off" aria-label="Tavoli per @row.BookerName" placeholder="01, 02" />
+                                    <button type="submit" class="secondary-action" disabled="@(Model.TableRows.Count == 0)">Salva</button>
+                                    <span class="assisted-row-feedback" data-assisted-feedback aria-live="polite"></span>
+                                </form>
+                            }
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="panel" id="manual-legacy">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Selezione</p>
+                    <h2>Assegnazione con menu tavoli</h2>
                 </div>
             </header>
             @if (Model.ReservationRows.Count == 0)

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using GestionePrenotazioni.Web.Domain;
 using GestionePrenotazioni.Web.Services;
 using GestionePrenotazioni.Web.Services.TableAssignment;
@@ -96,6 +97,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
     public IReadOnlyList<Reservation> ActiveReservations { get; private set; } = [];
     public IReadOnlyList<ReservationRow> ReservationRows { get; private set; } = [];
     public IReadOnlyList<ReservationRow> UnassignedReservationRows { get; private set; } = [];
+    public IReadOnlyList<AssistedAssignmentRow> AssistedAssignmentRows { get; private set; } = [];
     public IReadOnlyList<AssignmentRow> AssignmentRows { get; private set; } = [];
     public IReadOnlyList<OrganizationRow> OrganizationRows { get; private set; } = [];
     public IReadOnlyList<EventRow> EventRows { get; private set; } = [];
@@ -777,6 +779,54 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         return RedirectToPageWithSelection(null, CurrentPageIs("/Assignments") ? "manual-assignments" : "booking-list");
     }
 
+    public IActionResult OnPostAssistedAssign(Guid reservationId, string? tableCodes)
+    {
+        if (DenyUnlessReservationManagement() is { } denied)
+        {
+            return denied;
+        }
+
+        if (!store.UserCanAccessReservation(CurrentUser, reservationId))
+        {
+            return Forbid();
+        }
+
+        var reservation = store.Reservations.FirstOrDefault(item => item.Id == reservationId);
+        if (reservation is null)
+        {
+            return AssistedAssignJson(false, "Prenotazione non trovata.", null, null, null, 404);
+        }
+
+        var targetTableIds = ParseAssistedTableIds(reservation.ShiftId, tableCodes, out var parseError);
+        if (!string.IsNullOrWhiteSpace(parseError))
+        {
+            return AssistedAssignJson(false, parseError, null, null, null, 400);
+        }
+
+        if (targetTableIds.Any(tableId => !store.UserCanAccessTable(CurrentUser, tableId)))
+        {
+            return Forbid();
+        }
+
+        if (!store.AssignReservationManually(reservationId, targetTableIds, CurrentUserId(), out var error))
+        {
+            return AssistedAssignJson(false, error, null, null, null, 400);
+        }
+
+        var assignments = store.Assignments.Where(item => item.ShiftId == reservation.ShiftId).ToArray();
+        var assignment = assignments.FirstOrDefault(item => item.ReservationIds.Contains(reservationId));
+        IReadOnlyList<DiningTable> assignedTables = assignment is null
+            ? []
+            : store.Tables.Where(table => assignment.TableIds.Contains(table.Id)).OrderBy(table => table.Code).ToArray();
+
+        return AssistedAssignJson(
+            true,
+            "Assegnazione salvata.",
+            assignment is null ? string.Empty : FormatTableCodes(assignedTables),
+            StatusLabel(ReservationStatus.Assigned),
+            StatusCssClass(ReservationStatus.Assigned));
+    }
+
     public IActionResult OnPostArrived(Guid reservationId)
     {
         if (DenyUnlessReception() is { } denied)
@@ -1007,6 +1057,28 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
                 StatusCssClass(reservation.Status),
                 "Da assegnare",
                 null))
+            .ToArray();
+
+        AssistedAssignmentRows = ActiveReservations
+            .OrderBy(reservation => reservation.BookerName)
+            .ThenBy(reservation => reservation.ExpectedAt)
+            .Select(reservation =>
+            {
+                var assignment = assignments.FirstOrDefault(item => item.ReservationIds.Contains(reservation.Id));
+                IReadOnlyList<DiningTable> assignedTables = assignment is null
+                    ? []
+                    : Tables.Where(table => assignment.TableIds.Contains(table.Id)).OrderBy(table => table.Code).ToArray();
+
+                return new AssistedAssignmentRow(
+                    reservation.Id,
+                    reservation.BookerName,
+                    reservation.ExpectedAt?.ToString("HH:mm") ?? string.Empty,
+                    reservation.PartySize,
+                    assignedTables.Count == 0 ? string.Empty : FormatTableCodes(assignedTables),
+                    string.Join(", ", assignedTables.Select(table => table.Code)),
+                    StatusLabel(reservation.Status),
+                    StatusCssClass(reservation.Status));
+            })
             .ToArray();
 
         OrganizationRows = organizations.Select(item => new OrganizationRow(item.Id, item.Name, item.Id == CurrentUser.OrganizationId)).ToArray();
@@ -1753,6 +1825,74 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
         };
     }
 
+    private IActionResult AssistedAssignJson(bool ok, string message, string? tableLabel, string? statusLabel, string? statusCssClass, int statusCode = 200)
+    {
+        return new JsonResult(new
+        {
+            ok,
+            message,
+            tableLabel = string.IsNullOrWhiteSpace(tableLabel) ? "Da assegnare" : tableLabel,
+            statusLabel = statusLabel ?? string.Empty,
+            statusCssClass = statusCssClass ?? string.Empty
+        })
+        {
+            StatusCode = statusCode
+        };
+    }
+
+    private IReadOnlyList<Guid> ParseAssistedTableIds(Guid shiftId, string? tableCodes, out string error)
+    {
+        error = string.Empty;
+        var tokens = Regex.Split(tableCodes ?? string.Empty, @"[\s,;/\\\-]+")
+            .Select(token => token.Trim())
+            .Where(token => token.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (tokens.Length == 0)
+        {
+            error = "Inserisci almeno un tavolo.";
+            return [];
+        }
+
+        var shiftTables = store.Tables.Where(table => table.ShiftId == shiftId).ToArray();
+        var tableIds = new List<Guid>(tokens.Length);
+        foreach (var token in tokens)
+        {
+            var table = FindTableByAssistedCode(shiftTables, token);
+            if (table is null)
+            {
+                error = $"Tavolo {token} non trovato nel turno selezionato.";
+                return [];
+            }
+
+            tableIds.Add(table.Id);
+        }
+
+        return tableIds;
+    }
+
+    private static DiningTable? FindTableByAssistedCode(IEnumerable<DiningTable> tables, string token)
+    {
+        var cleanToken = token.Length > 1 && token[0] is 'T' or 't' ? token[1..] : token;
+        foreach (var table in tables)
+        {
+            if (string.Equals(table.Code, cleanToken, StringComparison.OrdinalIgnoreCase))
+            {
+                return table;
+            }
+
+            if (int.TryParse(cleanToken, out var tokenNumber) &&
+                int.TryParse(table.Code, out var tableNumber) &&
+                tokenNumber == tableNumber)
+            {
+                return table;
+            }
+        }
+
+        return null;
+    }
+
     private static string CreatedInfoLabel(Reservation reservation, IReadOnlyDictionary<Guid, string> usersById)
     {
         var parts = new List<string>(2);
@@ -1832,6 +1972,7 @@ public sealed class IndexModel(AppStore store, ITableAssignmentService assignmen
     }
 
     public sealed record ReservationRow(Guid Id, string BookerName, string MobilePhone, string Notes, string CreatedInfoLabel, string ExpectedAt, int PartySize, string StatusLabel, string StatusCssClass, string TableLabel, ReservationTableBadge? TableBadge);
+    public sealed record AssistedAssignmentRow(Guid Id, string BookerName, string ExpectedAt, int PartySize, string TableLabel, string TableInputValue, string StatusLabel, string StatusCssClass);
     public sealed record ReservationTableBadge(string Label, int Capacity, int FreeSeats);
     public sealed record AssignmentRow(Guid Id, string TableLabel, string ReservationLabel, string Source, int People, int Capacity);
     public sealed record OrganizationRow(Guid Id, string Name, bool IsCurrentUserOrganization);

@@ -277,6 +277,81 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelector("[data-assisted-search]")?.addEventListener("input", (event) => {
+    if (!(event.target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const query = event.target.value.trim().toLocaleUpperCase("it-IT");
+    document.querySelectorAll("[data-assisted-row]").forEach((row) => {
+      const name = row.querySelector(".assisted-reservation-main strong")?.textContent?.toLocaleUpperCase("it-IT") || "";
+      row.toggleAttribute("hidden", query.length > 0 && !name.includes(query));
+    });
+  });
+
+  document.querySelectorAll("[data-assisted-assign-form]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const row = form.closest("[data-assisted-row]");
+      const feedback = row?.querySelector("[data-assisted-feedback]");
+      const tableLabel = row?.querySelector("[data-assisted-table-label]");
+      const status = row?.querySelector("[data-assisted-status]");
+      const input = form.querySelector("input[name='tableCodes']");
+      const button = form.querySelector("button[type='submit']");
+
+      if (feedback) {
+        feedback.textContent = "Salvataggio...";
+        feedback.className = "assisted-row-feedback is-pending";
+      }
+
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = true;
+      }
+
+      try {
+        const response = await fetch(form.action || window.location.href, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { "X-Requested-With": "fetch" }
+        });
+        const result = await response.json();
+
+        if (!response.ok || result.ok === false) {
+          throw new Error(result.message || "Assegnazione non salvata.");
+        }
+
+        if (tableLabel) {
+          tableLabel.textContent = result.tableLabel || "Da assegnare";
+        }
+
+        if (status) {
+          status.textContent = result.statusLabel || status.textContent;
+          status.className = `reservation-status ${result.statusCssClass || ""}`.trim();
+        }
+
+        if (feedback) {
+          feedback.textContent = result.message || "Salvato.";
+          feedback.className = "assisted-row-feedback is-success";
+        }
+
+        if (input instanceof HTMLInputElement) {
+          input.focus();
+          input.select();
+        }
+      } catch (error) {
+        if (feedback) {
+          feedback.textContent = error.message || "Errore durante il salvataggio.";
+          feedback.className = "assisted-row-feedback is-error";
+        }
+      } finally {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = false;
+        }
+      }
+    });
+  });
+
   document.querySelectorAll("[data-assign-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       if (form.dataset.hasAssignments !== "true") {

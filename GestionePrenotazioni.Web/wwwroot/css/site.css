@@ -1333,6 +1333,104 @@ button[disabled] {
   align-items: center;
 }
 
+.assisted-search {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.assisted-assignment-list {
+  display: grid;
+  gap: 8px;
+}
+
+.assisted-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) auto minmax(120px, 0.5fr) minmax(260px, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.assisted-reservation-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.assisted-reservation-main strong {
+  overflow: hidden;
+  color: var(--primary-dark);
+  font-size: 0.98rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assisted-reservation-main span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.assisted-table-label {
+  display: inline-flex;
+  justify-content: center;
+  width: fit-content;
+  min-width: 86px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #e8f4f5;
+  color: #0f5960;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.assisted-assignment-form {
+  display: grid;
+  grid-template-columns: minmax(86px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.assisted-assignment-form input {
+  min-height: 38px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.assisted-assignment-form button {
+  min-height: 38px;
+  padding-inline: 14px;
+}
+
+.assisted-row-feedback {
+  grid-column: 1 / -1;
+  min-height: 17px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.assisted-row-feedback.is-success {
+  color: #166244;
+}
+
+.assisted-row-feedback.is-error {
+  color: #b42318;
+}
+
+.assisted-row-feedback.is-pending {
+  color: #875a09;
+}
+
 .row-edit {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(90px, auto) auto auto;
@@ -1556,6 +1654,7 @@ button[disabled] {
 
   .reservation-card,
   .compact-list article,
+  .assisted-assignment-row,
   .row-edit,
   .table-edit {
     grid-template-columns: 1fr;
@@ -1595,5 +1694,15 @@ button[disabled] {
   .booking-cancel-form,
   .booking-cancel-action {
     width: auto;
+  }
+
+  .assisted-assignment-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .assisted-table-label,
+  .assisted-assignment-row .reservation-status {
+    justify-content: flex-start;
+    width: fit-content;
   }
 }
