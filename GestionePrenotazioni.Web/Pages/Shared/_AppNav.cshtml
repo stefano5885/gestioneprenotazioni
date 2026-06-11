@@ -29,7 +29,7 @@
         }
         @if (Model.CanReception)
         {
-            <a class="nav-link @(currentPage == "/Reception" ? "active" : string.Empty)" asp-page="/Reception">
+            <a class="nav-link @(currentPage == "/Reception" ? "active" : string.Empty)" asp-page="/Reception" asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId" asp-route-SelectedEventId="@Model.SelectedEventId" asp-route-SelectedDateId="@Model.SelectedDateId" asp-route-SelectedShiftId="@Model.SelectedShiftId">
                 <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 21v-2a4 4 0 0 1 8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 16h4M16 16h4" /></svg></span>
                 <span class="nav-label">Accoglienza</span>
             </a>

@@ -34,30 +34,36 @@
         </section>
 
         <section class="work-grid">
-            <a class="panel nav-panel action-card action-bookings" asp-page="/Bookings"
-               asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
-               asp-route-SelectedEventId="@Model.SelectedEventId"
-               asp-route-SelectedDateId="@Model.SelectedDateId"
-               asp-route-SelectedShiftId="@Model.SelectedShiftId">
-                <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10v4H7zM5 7h14v14H5zM8 12h8M8 16h6" /></svg></span>
-                <span class="action-copy"><strong>Prenotazioni</strong><small>Inserimento, modifica, cancellazione e assegnazione manuale.</small></span>
-            </a>
-            <a class="panel nav-panel action-card action-reception" asp-page="/Reception"
-               asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
-               asp-route-SelectedEventId="@Model.SelectedEventId"
-               asp-route-SelectedDateId="@Model.SelectedDateId"
-               asp-route-SelectedShiftId="@Model.SelectedShiftId">
-                <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 21v-2a4 4 0 0 1 8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 16h4M16 16h4" /></svg></span>
-                <span class="action-copy"><strong>Accoglienza</strong><small>Ricerca rapida, presenti, annullate e non presentati.</small></span>
-            </a>
-            <a class="panel nav-panel action-card action-assignments" asp-page="/Assignments"
-               asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
-               asp-route-SelectedEventId="@Model.SelectedEventId"
-               asp-route-SelectedDateId="@Model.SelectedDateId"
-               asp-route-SelectedShiftId="@Model.SelectedShiftId">
-                <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10h16M6 10v9M18 10v9M8 6h8a3 3 0 0 1 3 3v1H5V9a3 3 0 0 1 3-3z" /></svg></span>
-                <span class="action-copy"><strong>Assegnazione</strong><small>@Model.AssignmentSummary</small></span>
-            </a>
+            @if (Model.CanManageReservations)
+            {
+                <a class="panel nav-panel action-card action-bookings" asp-page="/Bookings"
+                   asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
+                   asp-route-SelectedEventId="@Model.SelectedEventId"
+                   asp-route-SelectedDateId="@Model.SelectedDateId"
+                   asp-route-SelectedShiftId="@Model.SelectedShiftId">
+                    <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10v4H7zM5 7h14v14H5zM8 12h8M8 16h6" /></svg></span>
+                    <span class="action-copy"><strong>Prenotazioni</strong><small>Inserimento, modifica, cancellazione e assegnazione manuale.</small></span>
+                </a>
+                <a class="panel nav-panel action-card action-assignments" asp-page="/Assignments"
+                   asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
+                   asp-route-SelectedEventId="@Model.SelectedEventId"
+                   asp-route-SelectedDateId="@Model.SelectedDateId"
+                   asp-route-SelectedShiftId="@Model.SelectedShiftId">
+                    <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10h16M6 10v9M18 10v9M8 6h8a3 3 0 0 1 3 3v1H5V9a3 3 0 0 1 3-3z" /></svg></span>
+                    <span class="action-copy"><strong>Assegnazione</strong><small>@Model.AssignmentSummary</small></span>
+                </a>
+            }
+            @if (Model.CanReception)
+            {
+                <a class="panel nav-panel action-card action-reception" asp-page="/Reception"
+                   asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
+                   asp-route-SelectedEventId="@Model.SelectedEventId"
+                   asp-route-SelectedDateId="@Model.SelectedDateId"
+                   asp-route-SelectedShiftId="@Model.SelectedShiftId">
+                    <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 21v-2a4 4 0 0 1 8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 16h4M16 16h4" /></svg></span>
+                    <span class="action-copy"><strong>Accoglienza</strong><small>Ricerca rapida, presenti, annullate e non presentati.</small></span>
+                </a>
+            }
             @if (Model.CanManageSetup)
             {
                 <a class="panel nav-panel action-card action-config" asp-page="/Config"
