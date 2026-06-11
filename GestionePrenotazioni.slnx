@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="GestionePrenotazioni.Tests/GestionePrenotazioni.Tests.csproj" />
+  <Project Path="GestionePrenotazioni.Web/GestionePrenotazioni.Web.csproj" />
+</Solution>

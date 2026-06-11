@@ -1,0 +1,122 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Assegnazioni";
+}
+
+<div class="app-shell">
+    <partial name="_AppNav" model="Model" />
+    <main class="main-stack">
+        <partial name="_ContextHeader" model="Model" />
+
+        <section class="panel" id="assignments">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Assegnazione</p>
+                    <h2>Tavoli del turno</h2>
+                    <p>@Model.AssignmentSummary · @Model.Tables.Count tavoli · @Model.ActiveReservations.Count prenotazioni attive</p>
+                </div>
+                @if (Model.CanManageReservations)
+                {
+                    <form method="post" asp-page-handler="Assign" data-assign-form data-has-assignments="@Model.HasAssignments.ToString().ToLowerInvariant()">
+                        <input type="hidden" name="confirmReassign" value="false" data-confirm-reassign />
+                        <input type="hidden" asp-for="SelectedOrganizationId" />
+                        <input type="hidden" asp-for="SelectedEventId" />
+                        <input type="hidden" asp-for="SelectedDateId" />
+                        <input type="hidden" asp-for="SelectedShiftId" />
+                        <button type="submit" class="primary-action">Assegna tavoli</button>
+                    </form>
+                }
+            </header>
+            @if (Model.Tables.Count == 0)
+            {
+                <p class="notice">Non ci sono tavoli configurati per questo turno. Aggiungili da Configurazione > Tavoli.</p>
+            }
+            else if (Model.ActiveReservations.Count == 0)
+            {
+                <p class="notice">Non ci sono prenotazioni attive in questo turno.</p>
+            }
+            <div class="assignment-grid">
+                @foreach (var assignment in Model.AssignmentRows)
+                {
+                    <article>
+                        <strong>@assignment.TableLabel</strong>
+                        <span>@assignment.ReservationLabel</span>
+                        <span>@assignment.Source · @assignment.People/@assignment.Capacity posti</span>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <section class="panel" id="unassigned">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Controllo</p>
+                    <h2>Non assegnate</h2>
+                </div>
+            </header>
+            @if (Model.UnassignedReservationRows.Count == 0)
+            {
+                <p class="notice">Tutte le prenotazioni attive risultano assegnate.</p>
+            }
+            <div class="reservation-list">
+                @foreach (var row in Model.UnassignedReservationRows)
+                {
+                    <article class="reservation-card">
+                        <div>
+                            <strong>@row.BookerName</strong>
+                            <span>@row.PartySize persone · @row.StatusLabel</span>
+                            <span>@row.ExpectedAt @row.MobilePhone</span>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <section class="panel" id="manual-assignments">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Manuale</p>
+                    <h2>Prenotazioni da verificare</h2>
+                </div>
+            </header>
+            @if (Model.ReservationRows.Count == 0)
+            {
+                <p class="notice">Nessuna prenotazione da mostrare per il turno selezionato.</p>
+            }
+            <div class="reservation-list">
+                @foreach (var row in Model.ReservationRows)
+                {
+                    <article class="reservation-card">
+                        <div>
+                            <strong>@row.BookerName</strong>
+                            <span>@row.PartySize persone · @row.TableLabel</span>
+                        </div>
+                        @if (Model.CanManageReservations)
+                        {
+                            <details class="inline-details">
+                                <summary>Assegna tavoli</summary>
+                                <form method="post" asp-page-handler="ManualAssign" class="form-grid">
+                                    <input type="hidden" name="reservationId" value="@row.Id" />
+                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                    <input type="hidden" asp-for="SelectedEventId" />
+                                    <input type="hidden" asp-for="SelectedDateId" />
+                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                    <label>Tavoli
+                                        <select name="targetTableIds" multiple size="4">
+                                            @foreach (var table in Model.TableRows)
+                                            {
+                                                <option value="@table.Id">Tavolo @table.Code - @table.OccupancyLabel</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <button type="submit" class="secondary-action" disabled="@(Model.TableRows.Count == 0)">Salva assegnazione</button>
+                                </form>
+                            </details>
+                        }
+                    </article>
+                }
+            </div>
+        </section>
+    </main>
+</div>

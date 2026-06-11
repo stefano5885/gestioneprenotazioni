@@ -1,0 +1,57 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Export";
+}
+
+<div class="app-shell">
+    <partial name="_AppNav" model="Model" />
+    <main class="main-stack">
+        <partial name="_ContextHeader" model="Model" />
+
+        <section class="panel">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Liste</p>
+                    <h2>Export configurabile</h2>
+                </div>
+            </header>
+            <form method="get" class="export-form">
+                <input type="hidden" asp-for="SelectedOrganizationId" />
+                <input type="hidden" asp-for="SelectedEventId" />
+                <input type="hidden" asp-for="SelectedDateId" />
+                <input type="hidden" asp-for="SelectedShiftId" />
+                <label>Colonne export <input name="columnOrder" value="@Model.DefaultColumnOrder" /></label>
+                <label>Ordine
+                    <select name="sort">
+                        <option value="name">Nome</option>
+                        <option value="tables">Tavoli</option>
+                        <option value="people">Persone</option>
+                        <option value="status">Stato</option>
+                    </select>
+                </label>
+                <button type="submit" name="handler" value="ExportExcel" class="secondary-action">Excel</button>
+                <button type="submit" name="handler" value="ExportPdf" class="secondary-action">PDF</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Anteprima</p>
+                    <h2>Colonne disponibili</h2>
+                </div>
+            </header>
+            <div class="assignment-grid">
+                <article><strong>name</strong><span>NOME</span></article>
+                <article><strong>time</strong><span>ORA</span></article>
+                <article><strong>people</strong><span>PAX</span></article>
+                <article><strong>notes</strong><span>NOTE</span></article>
+                <article><strong>tables</strong><span>N. TAVOLO</span></article>
+                <article><strong>phone</strong><span>Cellulare, opzionale</span></article>
+                <article><strong>status</strong><span>Stato, opzionale</span></article>
+                <article><strong>date</strong><span>Data, opzionale</span></article>
+            </div>
+        </section>
+    </main>
+</div>

@@ -1,0 +1,116 @@
+@model IndexModel
+
+@if (Model.ReservationRows.Count == 0)
+{
+    <p class="notice">Nessuna prenotazione corrisponde alla ricerca.</p>
+}
+else
+{
+    <div class="reservation-list">
+        @foreach (var row in Model.ReservationRows)
+        {
+            <article class="reservation-card booking-reservation-card">
+                <div class="reservation-summary">
+                    <div class="reservation-person">
+                        <strong class="reservation-name">@row.BookerName</strong>
+                        <span class="reservation-meta">
+                            <span>@row.PartySize persone</span>
+                            @if (!string.IsNullOrWhiteSpace(row.ExpectedAt))
+                            {
+                                <span>ore @row.ExpectedAt</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(row.MobilePhone))
+                            {
+                                <span>@row.MobilePhone</span>
+                            }
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(row.Notes))
+                        {
+                            <span class="reservation-note">@row.Notes</span>
+                        }
+                    </div>
+                    <div class="reservation-chips">
+                        <span class="reservation-status @row.StatusCssClass">@row.StatusLabel</span>
+                        <partial name="_ReservationTableBadge" model="row.TableBadge" />
+                    </div>
+                </div>
+                @if (Model.CanManageReservations)
+                {
+                    <div class="booking-card-tools">
+                        <details class="inline-details booking-manage-panel">
+                            <summary title="Modifica prenotazione e tavoli">
+                                <span class="manage-icon" aria-hidden="true"></span>
+                                <span>Gestisci</span>
+                            </summary>
+                            <div class="booking-manage-content">
+                                <section class="booking-manage-section">
+                                    <h3>Dati prenotazione</h3>
+                                    <form method="post" asp-page-handler="UpdateReservation" class="form-grid booking-inline-form">
+                                        <input type="hidden" name="reservationId" value="@row.Id" />
+                                        <input type="hidden" asp-for="SelectedOrganizationId" />
+                                        <input type="hidden" asp-for="SelectedEventId" />
+                                        <input type="hidden" asp-for="SelectedDateId" />
+                                        <input type="hidden" asp-for="SelectedShiftId" />
+                                        <input type="hidden" asp-for="SearchText" />
+                                        <input type="hidden" asp-for="StatusFilter" />
+                                        <label>Nome <input name="bookerName" value="@row.BookerName" required data-uppercase-name /></label>
+                                        <label>Persone <input name="partySize" value="@row.PartySize" type="number" min="1" required /></label>
+                                        <label>Ora
+                                            <select name="expectedAt">
+                                                @foreach (var option in Model.ReservationTimeOptions)
+                                                {
+                                                    if (option.Value == row.ExpectedAt)
+                                                    {
+                                                        <option value="@option.Value" selected>@option.Text</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@option.Value">@option.Text</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </label>
+                                        <label>Cellulare <input name="mobilePhone" value="@row.MobilePhone" /></label>
+                                        <label class="form-wide">Note <textarea name="notes" rows="2">@row.Notes</textarea></label>
+                                        <button type="submit" class="booking-save-action">Salva prenotazione</button>
+                                    </form>
+                                </section>
+                                <section class="booking-manage-section booking-table-section">
+                                    <h3>Tavoli</h3>
+                                    <form method="post" asp-page-handler="ManualAssign" class="form-grid booking-inline-form">
+                                        <input type="hidden" name="reservationId" value="@row.Id" />
+                                        <input type="hidden" asp-for="SelectedOrganizationId" />
+                                        <input type="hidden" asp-for="SelectedEventId" />
+                                        <input type="hidden" asp-for="SelectedDateId" />
+                                        <input type="hidden" asp-for="SelectedShiftId" />
+                                        <input type="hidden" asp-for="SearchText" />
+                                        <input type="hidden" asp-for="StatusFilter" />
+                                        <label>Tavoli
+                                            <select name="targetTableIds" multiple size="4">
+                                                @foreach (var table in Model.TableRows)
+                                                {
+                                                    <option value="@table.Id">Tavolo @table.Code - @table.OccupancyLabel</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        <button type="submit" class="booking-assign-action" disabled="@(Model.TableRows.Count == 0)">Assegna tavoli</button>
+                                    </form>
+                                </section>
+                            </div>
+                        </details>
+                        <form method="post" asp-page-handler="Cancel" class="booking-cancel-form">
+                            <input type="hidden" name="reservationId" value="@row.Id" />
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <input type="hidden" asp-for="SearchText" />
+                            <input type="hidden" asp-for="StatusFilter" />
+                            <button type="submit" class="booking-cancel-action" disabled="@(row.StatusLabel == "Annullata")">Cancella</button>
+                        </form>
+                    </div>
+                }
+            </article>
+        }
+    </div>
+}

@@ -1,0 +1,403 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Configurazione";
+}
+
+<div class="app-shell">
+    <partial name="_AppNav" model="Model" />
+    <main class="main-stack">
+        <partial name="_ContextHeader" model="Model" />
+
+        @if (!Model.CanManageSetup)
+        {
+            <section class="panel">
+                <h2>Accesso non consentito</h2>
+                <p class="muted">La configurazione e riservata agli utenti admin.</p>
+            </section>
+        }
+        else
+        {
+            <section class="config-menu" aria-label="Sottomenu configurazione">
+                <a class="@(Model.IsConfigSection("organizations") ? "active" : string.Empty)" asp-page="/Config" asp-route-ConfigSection="organizations" asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId" asp-route-SelectedEventId="@Model.SelectedEventId" asp-route-SelectedDateId="@Model.SelectedDateId" asp-route-SelectedShiftId="@Model.SelectedShiftId">Organizzazioni</a>
+                <a class="@(Model.IsConfigSection("users") ? "active" : string.Empty)" asp-page="/Config" asp-route-ConfigSection="users" asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId" asp-route-SelectedEventId="@Model.SelectedEventId" asp-route-SelectedDateId="@Model.SelectedDateId" asp-route-SelectedShiftId="@Model.SelectedShiftId">Utenti</a>
+                <a class="@(Model.IsConfigSection("events") ? "active" : string.Empty)" asp-page="/Config" asp-route-ConfigSection="events" asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId" asp-route-SelectedEventId="@Model.SelectedEventId" asp-route-SelectedDateId="@Model.SelectedDateId" asp-route-SelectedShiftId="@Model.SelectedShiftId">Eventi</a>
+                <a class="@(Model.IsConfigSection("schedule") ? "active" : string.Empty)" asp-page="/Config" asp-route-ConfigSection="schedule" asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId" asp-route-SelectedEventId="@Model.SelectedEventId" asp-route-SelectedDateId="@Model.SelectedDateId" asp-route-SelectedShiftId="@Model.SelectedShiftId">Date, turni, tavoli</a>
+                <a class="@(Model.IsConfigSection("audit") ? "active" : string.Empty)" asp-page="/Config" asp-route-ConfigSection="audit" asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId" asp-route-SelectedEventId="@Model.SelectedEventId" asp-route-SelectedDateId="@Model.SelectedDateId" asp-route-SelectedShiftId="@Model.SelectedShiftId">Audit</a>
+            </section>
+
+            <section class="config-workspace" id="@Model.ActiveConfigSection">
+                @if (Model.IsConfigSection("organizations"))
+                {
+                    <article class="panel config-panel">
+                        <header class="panel-head"><div><p class="eyebrow">Configurazione</p><h2>Organizzazioni</h2></div></header>
+                        <form method="post" asp-page-handler="Organization" class="config-create">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Nuova organizzazione <input id="config-organization-name" asp-for="OrganizationInput.Name" autofocus="@(Model.FocusTarget == "config-organization-name")" /></label>
+                            <button type="submit" class="secondary-action">Crea</button>
+                        </form>
+                        <div class="config-table-wrap">
+                            <table class="config-table">
+                                <thead>
+                                    <tr><th>Nome</th><th>Stato</th><th>Azioni</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var organization in Model.OrganizationRows)
+                                    {
+                                        var editFormId = $"org-edit-{organization.Id}";
+                                        var deleteFormId = $"org-delete-{organization.Id}";
+                                        <tr>
+                                            <td><input form="@editFormId" name="name" value="@organization.Name" /></td>
+                                            <td>@(organization.IsCurrentUserOrganization ? "Corrente" : "Disponibile")</td>
+                                            <td class="table-actions">
+                                                <form id="@editFormId" method="post" asp-page-handler="RenameOrganization">
+                                                    <input type="hidden" name="organizationId" value="@organization.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@editFormId" type="submit" class="ghost-action">Salva</button>
+                                                <form id="@deleteFormId" method="post" asp-page-handler="DeleteOrganization" onsubmit="return confirm('Cancellare questa organizzazione? Verranno eliminati eventi, date, turni, tavoli, prenotazioni, assegnazioni e utenti collegati.');">
+                                                    <input type="hidden" name="organizationId" value="@organization.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@deleteFormId" type="submit" class="danger-action" disabled="@organization.IsCurrentUserOrganization">Cancella</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                }
+
+                @if (Model.IsConfigSection("users"))
+                {
+                    <article class="panel config-panel">
+                        <header class="panel-head"><div><p class="eyebrow">Configurazione</p><h2>Utenti</h2></div></header>
+                        <form method="post" asp-page-handler="User" class="config-create">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Utente <input id="config-user-name" asp-for="UserInput.UserName" autofocus="@(Model.FocusTarget == "config-user-name")" /></label>
+                            <label>Nome visualizzato <input asp-for="UserInput.DisplayName" /></label>
+                            <label>Password <input asp-for="UserInput.Password" type="password" /></label>
+                            <label>Ruolo <select asp-for="UserInput.Role" asp-items="Model.RoleOptions"></select></label>
+                            <button type="submit" class="secondary-action">Crea utente</button>
+                        </form>
+                        <div class="config-table-wrap">
+                            <table class="config-table">
+                                <thead>
+                                    <tr><th>Utente</th><th>Nome</th><th>Ruolo</th><th>Stato</th><th>Azioni</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in Model.UserRows)
+                                    {
+                                        var formId = $"user-active-{user.Id}";
+                                        <tr>
+                                            <td><strong>@user.UserName</strong></td>
+                                            <td>@user.DisplayName</td>
+                                            <td>@user.Role</td>
+                                            <td>@(user.IsActive ? "Attivo" : "Disattivato")</td>
+                                            <td class="table-actions">
+                                                <form id="@formId" method="post" asp-page-handler="SetUserActive">
+                                                    <input type="hidden" name="targetUserId" value="@user.Id" />
+                                                    <input type="hidden" name="isActive" value="@(!user.IsActive)" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@formId" type="submit" class="ghost-action">@(user.IsActive ? "Disattiva" : "Attiva")</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                }
+
+                @if (Model.IsConfigSection("events"))
+                {
+                    <article class="panel config-panel">
+                        <header class="panel-head"><div><p class="eyebrow">Configurazione</p><h2>Eventi</h2></div></header>
+                        <form method="post" asp-page-handler="Event" class="config-create">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Nuovo evento <input id="config-event-name" asp-for="EventInput.Name" autofocus="@(Model.FocusTarget == "config-event-name")" /></label>
+                            <button type="submit" class="secondary-action">Crea evento</button>
+                        </form>
+                        <div class="config-table-wrap">
+                            <table class="config-table">
+                                <thead>
+                                    <tr><th>Nome</th><th>Stato</th><th>Azioni</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.EventRows)
+                                    {
+                                        var editFormId = $"event-edit-{item.Id}";
+                                        var toggleFormId = $"event-toggle-{item.Id}";
+                                        var deleteFormId = $"event-delete-{item.Id}";
+                                        <tr>
+                                            <td><input form="@editFormId" name="name" value="@item.Name" /></td>
+                                            <td>@(item.IsArchived ? "Archiviato" : "Attivo")</td>
+                                            <td class="table-actions">
+                                                <form id="@editFormId" method="post" asp-page-handler="RenameEvent">
+                                                    <input type="hidden" name="eventId" value="@item.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@editFormId" type="submit" class="ghost-action">Salva</button>
+                                                <form id="@toggleFormId" method="post" asp-page-handler="ToggleEvent">
+                                                    <input type="hidden" name="eventId" value="@item.Id" />
+                                                    <input type="hidden" name="isArchived" value="@(!item.IsArchived)" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@toggleFormId" type="submit" class="ghost-action">@(item.IsArchived ? "Ripristina" : "Archivia")</button>
+                                                <form id="@deleteFormId" method="post" asp-page-handler="DeleteEvent" onsubmit="return confirm('Cancellare questo evento? Verranno eliminate anche date, turni, tavoli, prenotazioni e assegnazioni collegate.');">
+                                                    <input type="hidden" name="eventId" value="@item.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@deleteFormId" type="submit" class="danger-action">Cancella</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                }
+
+                @if (Model.IsConfigSection("schedule"))
+                {
+                    <article class="panel config-panel" id="wizard">
+                        <header class="panel-head"><div><p class="eyebrow">Evento</p><h2>Configurazione guidata</h2></div></header>
+                        <form method="post" asp-page-handler="GuidedEventSetup" class="guided-setup" onsubmit="return confirm('Creare date, turni e tavoli per l evento selezionato?');">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Dal <input id="config-wizard-start" asp-for="EventWizardInput.StartsOn" type="date" autofocus="@(Model.FocusTarget == "config-wizard-start")" /></label>
+                            <label>Al <input asp-for="EventWizardInput.EndsOn" type="date" /></label>
+                            <label class="guided-setup-shifts">Turni predefiniti <textarea asp-for="EventWizardInput.ShiftTemplates" rows="3"></textarea></label>
+                            <label>Tavoli per turno <input asp-for="EventWizardInput.TablesPerShift" type="number" min="1" /></label>
+                            <label>Capienza <input asp-for="EventWizardInput.TableCapacity" type="number" min="1" /></label>
+                            <button type="submit" class="primary-action">Crea struttura</button>
+                        </form>
+                    </article>
+
+                    <article class="panel config-panel" id="dates">
+                        <header class="panel-head"><div><p class="eyebrow">Configurazione</p><h2>Date</h2></div></header>
+                        <form method="post" asp-page-handler="Date" class="config-create">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Nuova data <input id="config-date-value" asp-for="DateInput.Date" type="date" autofocus="@(Model.FocusTarget == "config-date-value")" /></label>
+                            <button type="submit" class="secondary-action">Crea data</button>
+                        </form>
+                        <div class="config-table-wrap">
+                            <table class="config-table">
+                                <thead>
+                                    <tr><th>Data</th><th>Azioni</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var date in Model.DateRows)
+                                    {
+                                        var editFormId = $"date-edit-{date.Id}";
+                                        var deleteFormId = $"date-delete-{date.Id}";
+                                        <tr>
+                                            <td><input form="@editFormId" name="date" value="@date.Date.ToString("yyyy-MM-dd")" type="date" /></td>
+                                            <td class="table-actions">
+                                                <form id="@editFormId" method="post" asp-page-handler="UpdateDate">
+                                                    <input type="hidden" name="eventDateId" value="@date.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@editFormId" type="submit" class="ghost-action">Salva</button>
+                                                <form id="@deleteFormId" method="post" asp-page-handler="DeleteDate" onsubmit="return confirm('Cancellare questa data? Verranno eliminati anche turni, tavoli, prenotazioni e assegnazioni collegate.');">
+                                                    <input type="hidden" name="eventDateId" value="@date.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@deleteFormId" type="submit" class="danger-action">Cancella</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="panel config-panel" id="shifts">
+                        <header class="panel-head">
+                            <div><p class="eyebrow">Configurazione</p><h2>Turni</h2></div>
+                            <form method="post" asp-page-handler="ArchivePastShifts" onsubmit="return confirm('Archiviare i turni passati dell evento selezionato?');">
+                                <input type="hidden" asp-for="SelectedOrganizationId" />
+                                <input type="hidden" asp-for="SelectedEventId" />
+                                <input type="hidden" asp-for="SelectedDateId" />
+                                <input type="hidden" asp-for="SelectedShiftId" />
+                                <button type="submit" class="secondary-action">Archivia passati</button>
+                            </form>
+                        </header>
+                        <form method="post" asp-page-handler="Shift" class="config-create">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Nuovo turno <input id="config-shift-name" asp-for="ShiftInput.Name" autofocus="@(Model.FocusTarget == "config-shift-name")" /></label>
+                            <label>Ora inizio <input asp-for="ShiftInput.StartsAt" type="time" /></label>
+                            <button type="submit" class="secondary-action">Crea turno</button>
+                        </form>
+                        <div class="config-table-wrap">
+                            <table class="config-table">
+                                <thead>
+                                    <tr><th>Nome</th><th>Ora</th><th>Stato</th><th>Azioni</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var shift in Model.ShiftRows)
+                                    {
+                                        var editFormId = $"shift-edit-{shift.Id}";
+                                        var toggleFormId = $"shift-toggle-{shift.Id}";
+                                        var deleteFormId = $"shift-delete-{shift.Id}";
+                                        <tr>
+                                            <td><input form="@editFormId" name="name" value="@shift.Name" /></td>
+                                            <td><input form="@editFormId" name="startsAt" value="@shift.StartsAt" type="time" /></td>
+                                            <td><span class="status-pill @(shift.IsClosed ? "closed" : "open")">@(shift.IsClosed ? "Archiviato" : "Aperto")</span></td>
+                                            <td class="table-actions">
+                                                <form id="@editFormId" method="post" asp-page-handler="UpdateShift">
+                                                    <input type="hidden" name="shiftId" value="@shift.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@editFormId" type="submit" class="ghost-action">Salva</button>
+                                                <form id="@toggleFormId" method="post" asp-page-handler="SetShiftClosed">
+                                                    <input type="hidden" name="shiftId" value="@shift.Id" />
+                                                    <input type="hidden" name="isClosed" value="@(!shift.IsClosed)" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@toggleFormId" type="submit" class="ghost-action">@(shift.IsClosed ? "Ripristina" : "Archivia")</button>
+                                                <form id="@deleteFormId" method="post" asp-page-handler="DeleteShift" onsubmit="return confirm('Cancellare questo turno? Verranno eliminati anche tavoli, prenotazioni e assegnazioni collegate.');">
+                                                    <input type="hidden" name="shiftId" value="@shift.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@deleteFormId" type="submit" class="danger-action">Cancella</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="panel config-panel" id="tables">
+                        <header class="panel-head"><div><p class="eyebrow">Configurazione</p><h2>Tavoli</h2></div></header>
+                        <form method="post" asp-page-handler="Tables" class="config-create">
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <label>Nuovi tavoli <input id="config-table-count" asp-for="TableInput.Count" type="number" min="1" autofocus="@(Model.FocusTarget == "config-table-count")" /></label>
+                            <label>Capienza <input asp-for="TableInput.Capacity" type="number" min="1" /></label>
+                            <button type="submit" class="secondary-action">Aggiungi tavoli</button>
+                        </form>
+                        <div class="config-table-wrap">
+                            <table class="config-table">
+                                <thead>
+                                    <tr><th>Codice</th><th>Capienza</th><th>Note</th><th>Azioni</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var table in Model.TableRows)
+                                    {
+                                        var editFormId = $"table-edit-{table.Id}";
+                                        var deleteFormId = $"table-delete-{table.Id}";
+                                        <tr>
+                                            <td><input form="@editFormId" name="code" value="@table.Code" /></td>
+                                            <td><input form="@editFormId" name="capacity" value="@table.Capacity" type="number" min="1" /></td>
+                                            <td><input form="@editFormId" name="notes" value="@table.Notes" placeholder="Note" /></td>
+                                            <td class="table-actions">
+                                                <form id="@editFormId" method="post" asp-page-handler="UpdateTable">
+                                                    <input type="hidden" name="tableId" value="@table.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@editFormId" type="submit" class="ghost-action">Salva</button>
+                                                <form id="@deleteFormId" method="post" asp-page-handler="DeleteTable" onsubmit="return confirm('Cancellare questo tavolo? Le assegnazioni collegate verranno rimosse.');">
+                                                    <input type="hidden" name="tableId" value="@table.Id" />
+                                                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                                                    <input type="hidden" asp-for="SelectedEventId" />
+                                                    <input type="hidden" asp-for="SelectedDateId" />
+                                                    <input type="hidden" asp-for="SelectedShiftId" />
+                                                </form>
+                                                <button form="@deleteFormId" type="submit" class="danger-action">Cancella</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                }
+
+                @if (Model.IsConfigSection("audit"))
+                {
+                    <article class="panel config-panel">
+                        <header class="panel-head"><div><p class="eyebrow">Sistema</p><h2>Audit log</h2></div></header>
+                        <div class="config-table-wrap">
+                            <table class="config-table audit-table">
+                                <thead>
+                                    <tr><th>Data</th><th>Utente</th><th>Entita</th><th>Azione</th><th>Dettagli</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var audit in Model.AuditRows)
+                                    {
+                                        <tr>
+                                            <td>@audit.CreatedAt</td>
+                                            <td>@audit.UserName</td>
+                                            <td>@audit.EntityName<br /><span>@audit.EntityId</span></td>
+                                            <td>@audit.Action</td>
+                                            <td>@audit.Details</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                }
+            </section>
+        }
+    </main>
+</div>

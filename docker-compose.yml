@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5088:8080"
+    volumes:
+      - app-data:/app/App_Data
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DataProtection__KeysPath: /app/App_Data/keys
+
+volumes:
+  app-data:

@@ -1,0 +1,71 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Prenotazioni";
+}
+
+<div class="app-shell">
+    <partial name="_AppNav" model="Model" />
+    <main class="main-stack">
+        <partial name="_ContextHeader" model="Model" />
+
+        @if (Model.CanManageReservations)
+        {
+            <section class="panel" id="new-booking">
+                <header class="panel-head">
+                    <div>
+                        <p class="eyebrow">Prenotazioni</p>
+                        <h2>Nuova prenotazione</h2>
+                    </div>
+                </header>
+                <form method="post" asp-page-handler="Reservation" class="form-grid" data-duplicate-check-form>
+                    <input type="hidden" asp-for="SelectedOrganizationId" />
+                    <input type="hidden" asp-for="SelectedEventId" />
+                    <input type="hidden" asp-for="SelectedDateId" />
+                    <input type="hidden" asp-for="SelectedShiftId" />
+                    <label>Nome <input id="reservation-name" asp-for="ReservationInput.BookerName" required data-uppercase-name data-booker-name autofocus="@(Model.FocusTarget == "reservation-name" || string.IsNullOrWhiteSpace(Model.FocusTarget))" /></label>
+                    <label>Persone <input asp-for="ReservationInput.PartySize" type="number" min="1" required /></label>
+                    <label>Ora <select asp-for="ReservationInput.ExpectedAt" asp-items="Model.ReservationTimeOptions"></select></label>
+                    <label>Cellulare <input asp-for="ReservationInput.MobilePhone" /></label>
+                    <label class="form-wide">Note <textarea asp-for="ReservationInput.Notes" rows="2"></textarea></label>
+                    <button type="submit" class="primary-action">Aggiungi</button>
+                </form>
+            </section>
+        }
+
+        <section class="panel" id="booking-search">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Ricerca</p>
+                    <h2>Filtra prenotazioni</h2>
+                </div>
+            </header>
+            <form method="get" class="form-grid" data-live-filter-form data-live-filter-target="#booking-results">
+                <input type="hidden" asp-for="SelectedOrganizationId" />
+                <input type="hidden" asp-for="SelectedEventId" />
+                <input type="hidden" asp-for="SelectedDateId" />
+                <input type="hidden" asp-for="SelectedShiftId" />
+                <label>Nome o cellulare <input asp-for="SearchText" data-live-filter-input /></label>
+                <label>Stato <select asp-for="StatusFilter" asp-items="Model.StatusOptions" data-live-filter-input></select></label>
+                <button type="submit" class="secondary-action">Filtra</button>
+                <a class="ghost-action" asp-page="/Bookings"
+                   asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
+                   asp-route-SelectedEventId="@Model.SelectedEventId"
+                   asp-route-SelectedDateId="@Model.SelectedDateId"
+                   asp-route-SelectedShiftId="@Model.SelectedShiftId">Pulisci</a>
+            </form>
+        </section>
+
+        <section class="panel" id="booking-list">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Lista</p>
+                    <h2>Prenotazioni del turno</h2>
+                </div>
+            </header>
+            <div id="booking-results" class="reservation-results" aria-live="polite">
+                <partial name="_BookingReservationList" model="Model" />
+            </div>
+        </section>
+    </main>
+</div>

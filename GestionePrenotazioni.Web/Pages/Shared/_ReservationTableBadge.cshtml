@@ -1,0 +1,17 @@
+@model IndexModel.ReservationTableBadge?
+
+<div class="table-badge-list">
+    @if (Model is null)
+    {
+        <span class="table-badge table-badge-empty">
+            <span>Da assegnare</span>
+        </span>
+    }
+    else
+    {
+        <span class="table-badge">
+            <span class="table-badge-main">@Model.Label</span>
+            <span class="table-badge-capacity">liberi @Model.FreeSeats su @Model.Capacity</span>
+        </span>
+    }
+</div>

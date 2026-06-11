@@ -1,0 +1,47 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Accoglienza";
+}
+
+<div class="app-shell">
+    <partial name="_AppNav" model="Model" />
+    <main class="main-stack">
+        <partial name="_ContextHeader" model="Model" />
+
+        <section class="panel" id="reception-search">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Accoglienza</p>
+                    <h2>Ricerca rapida</h2>
+                </div>
+            </header>
+            <form method="get" class="form-grid" data-live-filter-form data-live-filter-target="#reception-results">
+                <input type="hidden" asp-for="SelectedOrganizationId" />
+                <input type="hidden" asp-for="SelectedEventId" />
+                <input type="hidden" asp-for="SelectedDateId" />
+                <input type="hidden" asp-for="SelectedShiftId" />
+                <label>Nome o cellulare <input id="reception-search-input" asp-for="SearchText" data-live-filter-input autofocus="@(Model.FocusTarget == "reception-search" || string.IsNullOrWhiteSpace(Model.FocusTarget))" /></label>
+                <label>Stato <select asp-for="StatusFilter" asp-items="Model.StatusOptions" data-live-filter-input></select></label>
+                <button type="submit" class="secondary-action">Filtra</button>
+                <a class="ghost-action" asp-page="/Reception"
+                   asp-route-SelectedOrganizationId="@Model.SelectedOrganizationId"
+                   asp-route-SelectedEventId="@Model.SelectedEventId"
+                   asp-route-SelectedDateId="@Model.SelectedDateId"
+                   asp-route-SelectedShiftId="@Model.SelectedShiftId">Pulisci</a>
+            </form>
+        </section>
+
+        <section class="panel" id="reception-list">
+            <header class="panel-head">
+                <div>
+                    <p class="eyebrow">Lista</p>
+                    <h2>Persone in arrivo</h2>
+                </div>
+            </header>
+            <div id="reception-results" class="reservation-results" aria-live="polite">
+                <partial name="_ReceptionReservationList" model="Model" />
+            </div>
+        </section>
+    </main>
+</div>

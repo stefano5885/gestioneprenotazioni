@@ -1,0 +1,75 @@
+@model IndexModel
+
+@if (Model.ReservationRows.Count == 0)
+{
+    <p class="notice">Nessuna prenotazione corrisponde alla ricerca.</p>
+}
+else
+{
+    <div class="reservation-list">
+        @foreach (var row in Model.ReservationRows)
+        {
+            <article class="reservation-card reception-reservation-card">
+                <div class="reservation-summary">
+                    <div class="reservation-person">
+                        <strong class="reservation-name">@row.BookerName</strong>
+                        <span class="reservation-meta">
+                            <span>@row.PartySize persone</span>
+                            @if (!string.IsNullOrWhiteSpace(row.ExpectedAt))
+                            {
+                                <span>ore @row.ExpectedAt</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(row.MobilePhone))
+                            {
+                                <span>@row.MobilePhone</span>
+                            }
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(row.Notes))
+                        {
+                            <span class="reservation-note">@row.Notes</span>
+                        }
+                    </div>
+                    <div class="reservation-chips">
+                        <span class="reservation-status @row.StatusCssClass">@row.StatusLabel</span>
+                        <partial name="_ReservationTableBadge" model="row.TableBadge" />
+                    </div>
+                </div>
+                @if (Model.CanReception)
+                {
+                    <div class="card-actions reception-card-actions">
+                        <form method="post" asp-page-handler="Arrived">
+                            <input type="hidden" name="reservationId" value="@row.Id" />
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <input type="hidden" asp-for="SearchText" />
+                            <input type="hidden" asp-for="StatusFilter" />
+                            <button type="submit" class="reception-action status-arrived" disabled="@(row.StatusCssClass == "status-arrived")">Presentati</button>
+                        </form>
+                        <form method="post" asp-page-handler="NoShow">
+                            <input type="hidden" name="reservationId" value="@row.Id" />
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <input type="hidden" asp-for="SearchText" />
+                            <input type="hidden" asp-for="StatusFilter" />
+                            <button type="submit" class="reception-action status-noshow" disabled="@(row.StatusCssClass == "status-noshow")">Non presentati</button>
+                        </form>
+                        <form method="post" asp-page-handler="Cancel" onsubmit="return confirm('Annullare questa prenotazione?');">
+                            <input type="hidden" name="reservationId" value="@row.Id" />
+                            <input type="hidden" asp-for="SelectedOrganizationId" />
+                            <input type="hidden" asp-for="SelectedEventId" />
+                            <input type="hidden" asp-for="SelectedDateId" />
+                            <input type="hidden" asp-for="SelectedShiftId" />
+                            <input type="hidden" asp-for="SearchText" />
+                            <input type="hidden" asp-for="StatusFilter" />
+                            <button type="submit" class="reception-action status-cancelled" disabled="@(row.StatusCssClass == "status-cancelled")">Annullata</button>
+                        </form>
+                    </div>
+                }
+            </article>
+        }
+    </div>
+}

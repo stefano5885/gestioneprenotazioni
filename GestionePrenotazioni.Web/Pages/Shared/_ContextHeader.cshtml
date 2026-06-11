@@ -1,0 +1,31 @@
+@model IndexModel
+
+@if (!Model.IsCompactWorkflowPage)
+{
+    <section class="topbar">
+        <div>
+            <p class="eyebrow">@Model.OrganizationName</p>
+            <h1>@(Model.SelectedEvent?.Name ?? "Gestione prenotazioni")</h1>
+            <p class="muted">@Model.SelectedDate?.Date.ToString("dd/MM/yyyy") · Turno @(Model.SelectedShift?.Name ?? "non selezionato")</p>
+        </div>
+    </section>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.FlashMessage))
+{
+    var flashKind = Model.FlashKind is "success" or "warning" or "danger" or "info"
+        ? Model.FlashKind
+        : "info";
+    <section class="flash-message flash-@flashKind" role="status" aria-live="polite" data-flash-message>
+        <div class="flash-content">
+            <strong>@Model.FlashMessage</strong>
+            @if (!string.IsNullOrWhiteSpace(Model.FlashDescription))
+            {
+                <span>@Model.FlashDescription</span>
+            }
+        </div>
+        <button class="flash-close" type="button" aria-label="Chiudi notifica" data-flash-close>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+    </section>
+}

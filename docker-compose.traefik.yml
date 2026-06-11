@@ -1,0 +1,32 @@
+services:
+  prenotazioniproloco:
+    image: ghcr.io/stefano5885/gestioneprenotazioni:latest
+    container_name: gestioneprenotazioniproloco
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DataProtection__KeysPath: /app/App_Data/keys
+    volumes:
+      - prenotazioni-data:/app/App_Data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prenotazioniproloco.rule=Host(`prenotazioni.prolocovillanovadelghebbo.it`)"
+      - "traefik.http.routers.prenotazioniproloco.entrypoints=https"
+      - "traefik.http.routers.prenotazioniproloco.tls.certresolver=myresolver"
+      - "traefik.http.services.prenotazioniproloco.loadbalancer.server.port=8080"
+      - "traefik.http.routers.prenotazioniproloco-http.rule=Host(`prenotazioni.prolocovillanovadelghebbo.it`)"
+      - "traefik.http.routers.prenotazioniproloco-http.entrypoints=http"
+      - "traefik.http.routers.prenotazioniproloco-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
+    name: traefik
+
+volumes:
+  prenotazioni-data:
+    name: prenotazioni-data

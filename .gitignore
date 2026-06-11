@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.vscode/
+TestResults/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+server.*.log
+*.log
+appsettings.Production.json
+App_Data/
+GestionePrenotazioni.Web/App_Data/
